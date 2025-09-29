@@ -197,6 +197,7 @@ export default function MeetingDetails() {
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [isAddingNote, setIsAddingNote] = useState<string | null>(null);
   const [departmentFilter, setDepartmentFilter] = useState<string>("all");
+  const [selectedStaff, setSelectedStaff] = useState<string | null>(null);
   const [newTask, setNewTask] = useState({
     title: "",
     description: "",
@@ -570,32 +571,39 @@ export default function MeetingDetails() {
               <div className="space-y-4">
                 {getResponsibilitiesByStaff().map((staff: any) => (
                   <div key={staff.name} className="p-4 border rounded-lg">
-                    <div className="flex items-center justify-between mb-3">
+                    <div 
+                      className="flex items-center justify-between mb-3 cursor-pointer hover:bg-accent/50 p-2 rounded-lg transition-colors"
+                      onClick={() => setSelectedStaff(selectedStaff === staff.name ? null : staff.name)}
+                    >
                       <div>
                         <h4 className="font-medium">{staff.name}</h4>
                         <p className="text-sm text-muted-foreground">{staff.department}</p>
                       </div>
-                      <div className="flex gap-2 text-xs">
-                        <Badge variant="secondary">{staff.tasks.length} Total</Badge>
-                        <Badge className="badge-success">{staff.completed} Done</Badge>
-                        <Badge className="badge-warning">{staff.inProgress} Progress</Badge>
-                        <Badge variant="secondary">{staff.pending} Pending</Badge>
+                      <div className="flex flex-col gap-1 text-xs">
+                        <Badge variant="secondary" className="text-center">{staff.tasks.length} Total</Badge>
+                        <Badge className="badge-success text-center">{staff.completed} Done</Badge>
+                        <Badge className="badge-warning text-center">{staff.inProgress} Progress</Badge>
+                        <Badge variant="secondary" className="text-center">{staff.pending} Pending</Badge>
                       </div>
                     </div>
-                    <div className="space-y-2">
-                      {staff.tasks.map((task: any) => (
-                        <div key={task.id} className="flex items-center justify-between text-sm">
-                          <div className="flex items-center gap-2">
-                            {getStatusIcon(task.status)}
-                            <span>{task.title}</span>
+                    
+                    {selectedStaff === staff.name && (
+                      <div className="mt-4 space-y-2 pl-4 border-l-2 border-primary/20">
+                        <h5 className="font-medium text-sm text-muted-foreground">All Tasks:</h5>
+                        {staff.tasks.map((task: any) => (
+                          <div key={task.id} className="flex items-center justify-between text-sm p-2 bg-accent/20 rounded">
+                            <div className="flex items-center gap-2">
+                              {getStatusIcon(task.status)}
+                              <span>{task.title}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {getPriorityBadge(task.priority)}
+                              <span className="text-muted-foreground">Due: {task.dueDate}</span>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            {getPriorityBadge(task.priority)}
-                            <span className="text-muted-foreground">Due: {task.dueDate}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
