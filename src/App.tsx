@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import Meetings from "./pages/Meetings";
 import CreateMeeting from "./pages/CreateMeeting";
+import MeetingDetails from "./pages/MeetingDetails";
 import KanbanBoard from "./pages/KanbanBoard";
 import NotFound from "./pages/NotFound";
 
@@ -27,6 +28,7 @@ const App = () => (
           <Route path="/dashboard" element={<Layout><Dashboard /></Layout>} />
           <Route path="/meetings" element={<Layout><Meetings /></Layout>} />
           <Route path="/meetings/create" element={<Layout><CreateMeeting /></Layout>} />
+          <Route path="/meetings/:id" element={<Layout><MeetingDetails /></Layout>} />
           <Route path="/kanban" element={<Layout><KanbanBoard /></Layout>} />
           
           {/* Placeholder routes for sidebar navigation */}

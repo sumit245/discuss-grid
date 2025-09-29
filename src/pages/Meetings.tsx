@@ -202,10 +202,14 @@ export default function Meetings() {
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>
+                <TableBody>
                 {filteredMeetings.map((meeting) => (
-                  <TableRow key={meeting.id}>
-                    <TableCell className="font-medium">{meeting.title}</TableCell>
+                  <TableRow key={meeting.id} className="cursor-pointer hover:bg-muted/50">
+                    <TableCell className="font-medium">
+                      <Link to={`/meetings/${meeting.id}`} className="hover:underline">
+                        {meeting.title}
+                      </Link>
+                    </TableCell>
                     <TableCell className="max-w-xs truncate">{meeting.agenda}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
@@ -240,6 +244,12 @@ export default function Meetings() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem asChild>
+                            <Link to={`/meetings/${meeting.id}`}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              View Details
+                            </Link>
+                          </DropdownMenuItem>
                           <DropdownMenuItem>
                             <Video className="mr-2 h-4 w-4" />
                             Join Meeting
