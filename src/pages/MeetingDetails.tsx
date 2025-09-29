@@ -67,6 +67,21 @@ const meeting = {
   ],
 };
 
+// Calculate task status summary
+const getTaskStatusSummary = (tasks: typeof discussionPoints) => {
+  const summary = tasks.reduce((acc, task) => {
+    acc[task.status] = (acc[task.status] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+  
+  const total = tasks.length;
+  const completed = summary.completed || 0;
+  const inProgress = summary["in-progress"] || 0;
+  const pending = summary.pending || 0;
+  
+  return { total, completed, inProgress, pending };
+};
+
 // Mock discussion points/tasks
 const discussionPoints = [
   {
@@ -180,6 +195,8 @@ function getStatusIcon(status: string) {
 export default function MeetingDetails() {
   const { id } = useParams();
   const [isAddingTask, setIsAddingTask] = useState(false);
+  const [isAddingNote, setIsAddingNote] = useState<string | null>(null);
+  const [departmentFilter, setDepartmentFilter] = useState<string>("all");
   const [newTask, setNewTask] = useState({
     title: "",
     description: "",
@@ -188,8 +205,34 @@ export default function MeetingDetails() {
     priority: "medium",
     dueDate: "",
   });
+  const [newNote, setNewNote] = useState("");
 
   const departments = ["Engineering", "Design", "Product", "QA", "Marketing", "Sales"];
+  const taskSummary = getTaskStatusSummary(discussionPoints);
+  
+  const filteredTasks = departmentFilter === "all" 
+    ? discussionPoints 
+    : discussionPoints.filter(task => task.department === departmentFilter);
+
+  const getResponsibilitiesByStaff = () => {
+    const responsibilities = discussionPoints.reduce((acc, task) => {
+      if (!acc[task.assignee]) {
+        acc[task.assignee] = {
+          name: task.assignee,
+          department: task.department,
+          tasks: [],
+          completed: 0,
+          inProgress: 0,
+          pending: 0
+        };
+      }
+      acc[task.assignee].tasks.push(task);
+      acc[task.assignee][task.status === "in-progress" ? "inProgress" : task.status]++;
+      return acc;
+    }, {} as Record<string, any>);
+    
+    return Object.values(responsibilities);
+  };
 
   return (
     <div className="space-y-6">
@@ -237,11 +280,27 @@ export default function MeetingDetails() {
 
         <Card>
           <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Discussion Points</CardTitle>
+            <CardTitle className="text-sm font-medium">Task Status</CardTitle>
             <CheckCircle className="h-4 w-4 ml-auto text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{discussionPoints.length}</div>
+            <div className="space-y-2">
+              <div className="text-2xl font-bold">{taskSummary.total} Total</div>
+              <div className="flex gap-4 text-sm">
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                  <span>{taskSummary.completed} Done</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 rounded-full bg-yellow-500"></div>
+                  <span>{taskSummary.inProgress} Progress</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 rounded-full bg-gray-500"></div>
+                  <span>{taskSummary.pending} Pending</span>
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -252,6 +311,7 @@ export default function MeetingDetails() {
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="discussion-points">Discussion Points</TabsTrigger>
           <TabsTrigger value="attendees">Attendees</TabsTrigger>
+          <TabsTrigger value="responsibilities">Responsibilities</TabsTrigger>
           <TabsTrigger value="follow-ups">Follow-ups</TabsTrigger>
         </TabsList>
 
@@ -279,7 +339,20 @@ export default function MeetingDetails() {
 
         <TabsContent value="discussion-points" className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold">Discussion Points & Tasks</h3>
+            <div className="flex items-center gap-4">
+              <h3 className="text-lg font-semibold">Discussion Points & Tasks</h3>
+              <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Filter by department" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Departments</SelectItem>
+                  {departments.map((dept) => (
+                    <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <Dialog open={isAddingTask} onOpenChange={setIsAddingTask}>
               <DialogTrigger asChild>
                 <Button>
@@ -368,7 +441,7 @@ export default function MeetingDetails() {
           </div>
 
           <div className="grid gap-4">
-            {discussionPoints.map((point) => (
+            {filteredTasks.map((point) => (
               <Card key={point.id}>
                 <CardContent className="pt-6">
                   <div className="space-y-4">
@@ -383,6 +456,14 @@ export default function MeetingDetails() {
                       <div className="flex gap-2">
                         {getPriorityBadge(point.priority)}
                         {getStatusBadge(point.status)}
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => setIsAddingNote(point.id)}
+                        >
+                          <Plus className="h-3 w-3 mr-1" />
+                          Add Note
+                        </Button>
                       </div>
                     </div>
                     
@@ -411,6 +492,39 @@ export default function MeetingDetails() {
                           </div>
                         ))}
                       </div>
+                      
+                      {isAddingNote === point.id && (
+                        <div className="space-y-2 pt-2 border-t">
+                          <div className="flex gap-2">
+                            <Input
+                              placeholder="Add follow-up note..."
+                              value={newNote}
+                              onChange={(e) => setNewNote(e.target.value)}
+                              className="flex-1"
+                            />
+                            <Button 
+                              size="sm"
+                              onClick={() => {
+                                // In real app, this would update the task
+                                setIsAddingNote(null);
+                                setNewNote("");
+                              }}
+                            >
+                              Save
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => {
+                                setIsAddingNote(null);
+                                setNewNote("");
+                              }}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </CardContent>
@@ -447,6 +561,48 @@ export default function MeetingDetails() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="responsibilities" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Staff Responsibilities Summary</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {getResponsibilitiesByStaff().map((staff: any) => (
+                  <div key={staff.name} className="p-4 border rounded-lg">
+                    <div className="flex items-center justify-between mb-3">
+                      <div>
+                        <h4 className="font-medium">{staff.name}</h4>
+                        <p className="text-sm text-muted-foreground">{staff.department}</p>
+                      </div>
+                      <div className="flex gap-2 text-xs">
+                        <Badge variant="secondary">{staff.tasks.length} Total</Badge>
+                        <Badge className="badge-success">{staff.completed} Done</Badge>
+                        <Badge className="badge-warning">{staff.inProgress} Progress</Badge>
+                        <Badge variant="secondary">{staff.pending} Pending</Badge>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      {staff.tasks.map((task: any) => (
+                        <div key={task.id} className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-2">
+                            {getStatusIcon(task.status)}
+                            <span>{task.title}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {getPriorityBadge(task.priority)}
+                            <span className="text-muted-foreground">Due: {task.dueDate}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="follow-ups" className="space-y-4">
           <Card>
             <CardHeader>
@@ -462,13 +618,26 @@ export default function MeetingDetails() {
                     </div>
                     <div className="flex items-center gap-2">
                       {getStatusBadge(followUp.status)}
-                      <Button variant="outline" size="sm">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => {
+                          // In real app, navigate to meeting details
+                          window.location.href = `/meetings/${followUp.id}`;
+                        }}
+                      >
                         View Details
                       </Button>
                     </div>
                   </div>
                 ))}
-                <Button className="w-full">
+                <Button 
+                  className="w-full"
+                  onClick={() => {
+                    // In real app, navigate to create meeting with pre-filled data
+                    window.location.href = '/create-meeting';
+                  }}
+                >
                   <Plus className="h-4 w-4 mr-2" />
                   Schedule Follow-up Meeting
                 </Button>
